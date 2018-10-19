@@ -1427,6 +1427,7 @@ class HostTestCase(APITestCase):
         self.assertIsNotNone(content_source_id)
         self.assertEqual(content_source_id, proxy.id)
 
+    @tier2
     def test_positive_read_enc_information(self):
         """Attempt to read host ENC information
 
