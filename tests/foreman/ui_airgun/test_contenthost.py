@@ -60,6 +60,7 @@ from robottelo.products import (
     SatelliteToolsRepository,
 )
 from robottelo.vm import VirtualMachine
+from time import sleep
 
 
 if not setting_is_set('clients') or not setting_is_set('fake_manifest'):
@@ -823,6 +824,69 @@ def test_module_status_update_from_content_host_to_satellite(session, vm_module_
             vm_module_streams
         )
 
+        module_stream = session.contenthost.search_module_stream(
+            vm_module_streams.hostname,
+            FAKE_2_CUSTOM_PACKAGE_NAME,
+            status='Installed',
+            stream_version=stream_version
+        )
+        assert module_stream[0]['Name'] == FAKE_2_CUSTOM_PACKAGE_NAME
+        assert module_stream[0]['Stream'] == stream_version
+        assert module_stream[0]['Installed Profile'] == profile
+
+        # remove walrus module stream with flipper profile
+        run_remote_command_on_content_host(
+            'dnf module remove {}:{}/{} -y'.format(
+                module_name,
+                stream_version,
+                profile
+            ),
+            vm_module_streams
+        )
+        assert not session.contenthost.search_module_stream(
+            vm_module_streams.hostname,
+            FAKE_2_CUSTOM_PACKAGE_NAME,
+            status='Installed',
+            stream_version=stream_version
+        )
+
+
+@tier3
+def test_module_status_update_without_force_upload_profile(session, vm_module_streams):
+    """ Verify you do not have to run dnf upload-profile or restart rhsmcertd
+    to update the module stream status to Satellite and that the web UI will also be updated.
+
+    :id: FIXME
+
+    :expectedresults: module stream status should get updated in Satellite
+
+    :CaseLevel: System
+
+    :CaseImportance: Medium
+    """
+    delay = 1 * 20
+    with session:
+        module_name = "walrus"
+        stream_version = "0.71"
+        profile = "flipper"
+        # reset walrus module streams
+        run_remote_command_on_content_host(
+            'dnf module reset {} -y'.format(module_name),
+            vm_module_streams
+        )
+        sleep(delay)
+
+        # install walrus module stream with flipper profile
+        run_remote_command_on_content_host(
+            'dnf module install {}:{}/{} -y'.format(
+                module_name,
+                stream_version,
+                profile
+            ),
+            vm_module_streams
+        )
+
+        sleep(delay)
         module_stream = session.contenthost.search_module_stream(
             vm_module_streams.hostname,
             FAKE_2_CUSTOM_PACKAGE_NAME,
