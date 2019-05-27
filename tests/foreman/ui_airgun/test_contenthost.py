@@ -234,7 +234,7 @@ def test_positive_end_to_end_bulk_update(session, repos_collection, vm):
     with session:
         # Ensure content host is searchable
         assert session.contenthost.search(vm.hostname)[0]['Name'] == vm.hostname
-        # Update package HERE WE NEED TO CHANGE TO USE BULK ACTION
+        # Update package WE NEED TO CHANGE TO USE BULK ACTION
         # Can we use the host collection way
         session.hostcollection.create({
             'name': hc_name,
@@ -243,16 +243,13 @@ def test_positive_end_to_end_bulk_update(session, repos_collection, vm):
             'description': description
         })
         session.hostcollection.associate_host(hc_name, vm.hostname)
-        # session.hostcollection.read(hc_name)
         session.hostcollection.manage_packages(
                     hc_name, content_type='Package',
                     packages=FAKE_1_CUSTOM_PACKAGE_NAME,
                     action='update_all'
         )
-        # Flash says "Successfully scheduled an update of all packages"
         import pdb; pdb.set_trace()
-        # assert result['result'] == 'success'
-        # Ensure package installed
+        # Ensure package updated
         packages = session.contenthost.search_package(vm.hostname, FAKE_2_CUSTOM_PACKAGE_NAME)
         assert packages[0]['Installed Package'] == FAKE_2_CUSTOM_PACKAGE
         # Delete content host
