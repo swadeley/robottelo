@@ -213,6 +213,54 @@ def test_positive_end_to_end(session, repos_collection, vm):
             assert not session.contenthost.search(vm.hostname)
 
 
+@upgrade
+@tier3
+def test_positive_end_to_end_bulk_update(session, repos_collection, vm):
+    """Create all entities required for content host, set up host, register it
+    as a content host, read content host details, use bulk Action update to
+    install package and errata.
+
+    :id: FIXME
+
+    :expectedresults: content host details are the same as expected, package
+        and errata installation are successful
+
+    :CaseLevel: System
+    """
+    hc_name = gen_string('alpha')
+    description = gen_string('alpha')
+    result = vm.run('yum -y install {0}'.format(FAKE_1_CUSTOM_PACKAGE))
+    assert result.return_code == 0
+    with session:
+        # Ensure content host is searchable
+        assert session.contenthost.search(vm.hostname)[0]['Name'] == vm.hostname
+        # Update package HERE WE NEED TO CHANGE TO USE BULK ACTION
+        # Can we use the host collection way
+        session.hostcollection.create({
+            'name': hc_name,
+            'unlimited_hosts': False,
+            'max_hosts': 2,
+            'description': description
+        })
+        session.hostcollection.associate_host(hc_name, vm.hostname)
+        # session.hostcollection.read(hc_name)
+        session.hostcollection.manage_packages(
+                    hc_name, content_type='Package',
+                    packages=FAKE_1_CUSTOM_PACKAGE_NAME,
+                    action='update_all'
+        )
+        # Flash says "Successfully scheduled an update of all packages"
+        import pdb; pdb.set_trace()
+        # assert result['result'] == 'success'
+        # Ensure package installed
+        packages = session.contenthost.search_package(vm.hostname, FAKE_2_CUSTOM_PACKAGE_NAME)
+        assert packages[0]['Installed Package'] == FAKE_2_CUSTOM_PACKAGE
+        # Delete content host
+        session.contenthost.delete(vm.hostname)
+        if not bz_bug_is_open(1662325):
+            assert not session.contenthost.search(vm.hostname)
+
+
 @tier3
 def test_positive_search_by_subscription_status(session, vm):
     """Register host into the system and search for it afterwards by
