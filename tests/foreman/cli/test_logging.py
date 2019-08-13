@@ -71,7 +71,7 @@ class SimpleLoggingTestCase(CLITestCase):
         return make_repository(options)
 
     def test_positive_logging_from_foreman_core(self):
-        """Check GET to API, parameters, then response."""
+        """Check that GET command to Hosts API is logged and it has the request ID."""
         GET_line_found = 0
         # log the start of the test in case of problems with slow systems
         self.logger.info("Testing test_positive_logging_from_foreman_core")
@@ -88,27 +88,39 @@ class SimpleLoggingTestCase(CLITestCase):
         with open("/var/tmp/logfile", "r") as logfile:
             for line in logfile:
                 if re.search(r'Started GET \"\/api/hosts\?page=1', line):
-                    print('Found:', line)
+                    self.logger.info('Found:', line)
                     GET_line_found = 1
                     break
             # Confirm the request ID was logged in the line with GET
             match = re.search(r'\[I\|app\|\w{8}\]', line)
             if match:
-                print("Request ID found")
+                self.logger.info("Request ID found")
             else:
                 with pytest.raises(AssertionError) as context:
                     assert match == 1, "Request ID not found"
-            with pytest.raises(AssertionError) as context:
-                assert GET_line_found == 1, "The GET command to list hosts was not found in logs."
-
+        with pytest.raises(AssertionError) as context:
+            assert GET_line_found == 1, "The GET command to list hosts was not found in logs."
 
     def test_positive_logging_from_proxy(self):
         """Check PUT to API, parameters, then response."""
-        # from_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        ssh.command('hammer proxy refresh feature')
-        result = ssh.command('tail /var/log/foreman/production.log')
-        print(result)
-        assert 'Started PUT "/api/smart_proxies/1/refresh"' in result
+        with ssh.get_connection() as connection:
+            result = connection.run('hammer proxy refresh feature')
+            self.assertEqual(result.return_code, 0)
+            # extract last ten lines from log
+            result = connection.run('tail /var/log/foreman/production.log > /var/tmp/logfile')
+            self.assertEqual(result.return_code, 0)
+        # use same location on remote and local for log file extract
+        logfile_location = '/var/tmp/logfile'
+        ssh.download_file(logfile_location)
+        # search the log file extract for the line with GET to host API
+        with open("/var/tmp/logfile", "r") as logfile:
+            for line in logfile:
+                if re.search(r'Started PUT \"\/api\/smart_proxies\/1\/refresh', line):
+                    self.logger.info('Found:', line)
+                    PUT_line_found = 1
+                    break
+        with pytest.raises(AssertionError) as context:
+            assert PUT_line_found == 1, "The PUT command to refresh proxies was not found in logs."
 
     def test_positive_logging_from_candlepin(self):
         """Check logging after load or manifest refresh."""
@@ -116,11 +128,26 @@ class SimpleLoggingTestCase(CLITestCase):
     def test_positive_logging_from_dynflow(self):
         """Check logging after enabling a repo."""
         new_repo = self._make_repository({u'name': gen_string('alpha')})
-        result = ssh.command('tail /var/log/foreman/production.log')
-        print(result)
-        assert 'Started POST "/katello/api/repositories"' in result
+        with ssh.get_connection() as connection:
+            # extract last ten lines from log
+            result = connection.run('tail /var/log/foreman/production.log > /var/tmp/logfile')
+            self.assertEqual(result.return_code, 0)
+        # use same location on remote and local for log file extract
+        logfile_location = '/var/tmp/logfile'
+        ssh.download_file(logfile_location)
+        # search the log file extract for the line with GET to host API
+        with open("/var/tmp/logfile", "r") as logfile:
+            for line in logfile:
+                if re.search(r'Started POST \"/katello\/api\/repositories', line):
+                    self.logger.info('Found:', line)
+                    POST_line_found = 1
+                    break
+        with pytest.raises(AssertionError) as context:
+            assert POST_line_found == 1, "The POST command to enable a repo was not found in logs."
 
     def test_positive_setup_journald_and_rsyslog(self):
         """Ensure all packages installed"""
-        ssh.command('rpm -q foreman-proxy-journald')
-        ssh.command('yum install -y foreman-proxy-journald')
+        result = ssh.command('rpm -q foreman-proxy-journald')
+        self.assertEqual(result.return_code, 0)
+        result = ssh.command('yum install -y foreman-proxy-journald')
+        self.assertEqual(result.return_code, 0)
