@@ -103,6 +103,7 @@ from robottelo.products import (
     YumRepository,
 )
 from robottelo.vm import VirtualMachine, VirtualMachineError
+from robottelo.containers import ContainerContext
 
 VERSION = 'Version 1.0'
 
@@ -4303,3 +4304,15 @@ def test_positive_greedy_dep_solving_with_multiversion_packages(session, module_
             'name = {}'.format(property_name),
             conserve_param_value
         )
+
+
+@tier2
+def test_positive_create_container(session, module_org):
+    """ Create container and register to satellite
+
+    id: 39842da3-94b4-4348-b7d9-94282ae4aaf8
+    """
+    with ContainerContext() as chost:
+        chost.register(org=module_org.name)
+        with session:
+            assert session.contenthost.search(chost.name)[0]['Name'] == chost.name
