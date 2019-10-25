@@ -15,8 +15,12 @@
 
 :Upstream: No
 """
-from robottelo.decorators import stubbed, tier1, upgrade
+from robottelo.decorators import stubbed, tier1, tier4, upgrade
 from robottelo.test import CLITestCase
+from robottelo.config import settings
+from nailgun import client, entities
+
+
 
 
 class BootstrapScriptTestCase(CLITestCase):
@@ -24,11 +28,21 @@ class BootstrapScriptTestCase(CLITestCase):
 
     @classmethod
     def setUpClass(cls):
-        """create VM for testing """
+        """Set up organization and location for tests."""
         super(BootstrapScriptTestCase, cls).setUpClass()
+        cls.org = entities.Organization().create()
+        cls.loc = entities.Location(organization=[cls.org]).create()
+        import pdb; pdb.set_trace()
+        # create an activation key
+        cls.ak = entities.ActivationKey().create()
 
-    @tier1
-    @stubbed()
+        # create a host group
+        hostgroup = entities.HostGroup(
+            location=[cls.loc],
+            organization=[cls.org],
+        ).create()
+
+    @tier4
     def test_positive_register(self):
         """System is registered
 
@@ -36,18 +50,26 @@ class BootstrapScriptTestCase(CLITestCase):
 
         :Steps:
 
-            1. assure system is not registered
-            2. register a system
+            1. create a container with host name
+            2. register system using bootstrap.py
+            3. assert subscription-identity is true
 
         :expectedresults: system is registered, host is created
 
-        :CaseAutomation: notautomated
+        :CaseAutomation: automated
 
-        :CaseImportance: Critical
+        :CaseImportance: High
         """
 
+        my_host = Container(agent=True)
+        my_host.execute("curl -O http://{}/pub/bootstrap.py".format(settings.server.hostname))
+        my_host.execute("python bootstrap.py -l admin -s {} -o '{}' -L '{}' -g {} -a {}".format
+                (settings.server.hostname,cls.org,cls.log,hostgroup.name,cls.ak.name))
+        result = my_host.execute("subscription-manager status")
+        assert result.return_code == 0, 'Not registered'
+        Container.delete(my_host)
+
     @tier1
-    @stubbed()
     @upgrade
     def test_positive_reregister(self):
         """Registered system is re-registered
@@ -56,16 +78,32 @@ class BootstrapScriptTestCase(CLITestCase):
 
         :Steps:
 
-            1. register a system
+            1. register a system using commands
             2. assure system is registered
-            3. register system once again
+            3. register system once again using bootstrap.py
+            4. assure system is registered
 
         :expectedresults: system is newly registered, host is created
 
-        :CaseAutomation: notautomated
+        :CaseAutomation: automated
 
-        :CaseImportance: Critical
+        :CaseImportance: Medium
         """
+
+        my_host = Container(agent=True)
+        my_host.register('{},{}'.format(settings.server.hostname,ak.name))
+        my_host.execute("subscription-manager attach --auto")
+        # Check and assert the host is registered
+        my_host.execute("subscription-manager status")
+        assert result.return_code == 0, 'Not registered'
+        # register host again using bootstrap.py
+        my_host.execute("curl -O http://{}/pub/bootstrap.py".format(settings.server.hostname))
+        my_host.execute("python bootstrap.py -l admin -s {} -o '{}' -L '{}' -g {} -a {}".format
+                (settings.server.hostname,cls.org,cls.log,hostgroup.name,ak.name))
+        # Check and assert the host is registered
+        result = my_host.execute("subscription-manager status")
+        assert result.return_code == 0, 'Not registered'
+        Container.delete(my_host)
 
     @tier1
     @stubbed()
