@@ -22,6 +22,7 @@ from robottelo.test import CLITestCase
 from robottelo.config import settings
 from robottelo.containers import Container
 
+
 class BootstrapScriptTestCase(CLITestCase):
     """Test class for bootstrap script."""
 
@@ -89,15 +90,15 @@ class BootstrapScriptTestCase(CLITestCase):
         my_fqdn = host_name.strip() + '.' + self.domain.name + '.' 'com'
         my_host.execute("curl -O http://{}/pub/bootstrap.py".format(settings.server.hostname))
         result = my_host.execute("python bootstrap.py -l admin -p changeme -s {} -o '{}' "
-                        "-L '{}' -g {} -a {} --fqdn {} --force --add-domain"
-                        .format(
-                            settings.server.hostname,
-                            self.org.name, self.loc.name,
-                            self.hostgroup.name,
-                            self.ak.name,
-                            my_fqdn
-                        )
-        )
+                                 "-L '{}' -g {} -a {} --fqdn {} --force --add-domain"
+                                 .format(
+                                     settings.server.hostname,
+                                     self.org.name, self.loc.name,
+                                     self.hostgroup.name,
+                                     self.ak.name,
+                                     my_fqdn
+                                 )
+         )
         assert "The system has been registered" in result, 'Not registered'
         Container.delete(my_host)
 
@@ -132,15 +133,15 @@ class BootstrapScriptTestCase(CLITestCase):
         # register host again using bootstrap.py
         my_host.execute("curl -O http://{}/pub/bootstrap.py".format(settings.server.hostname))
         result = my_host.execute("python bootstrap.py -l admin -p changeme -s {} -o '{}' "
-                        "-L '{}' -g {} -a {} --fqdn {} --force --add-domain"
-                        .format(
-                            settings.server.hostname,
-                            self.org.name, self.loc.name,
-                            self.hostgroup.name,
-                            self.ak.name,
-                            my_fqdn
-                        )
-        )
+                                 "-L '{}' -g {} -a {} --fqdn {} --force --add-domain"
+                                 .format(
+                                     settings.server.hostname,
+                                     self.org.name, self.loc.name,
+                                     self.hostgroup.name,
+                                     self.ak.name,
+                                     my_fqdn
+                                 )
+         )
         # Check and assert the host is registered
         result = my_host.execute("subscription-manager status")
         assert result.return_code == 0, 'Not registered'
