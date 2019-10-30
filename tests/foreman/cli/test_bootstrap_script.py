@@ -15,17 +15,12 @@
 
 :Upstream: No
 """
+from nailgun import entities
 from robottelo.decorators import stubbed, tier1, tier4, upgrade
-from robottelo.api.utils import promote, one_to_one_names
+from robottelo.api.utils import promote
 from robottelo.test import CLITestCase
 from robottelo.config import settings
-from nailgun import entities
 from robottelo.containers import Container
-from robottelo.constants import (
-    RHEL_7_MAJOR_VERSION,
-    RHEL_6_MAJOR_VERSION,
-)
-
 
 class BootstrapScriptTestCase(CLITestCase):
     """Test class for bootstrap script."""
@@ -36,25 +31,24 @@ class BootstrapScriptTestCase(CLITestCase):
         super(BootstrapScriptTestCase, cls).setUpClass()
         cls.org = entities.Organization().create()
         cls.loc = entities.Location(organization=[cls.org]).create()
-        # create an activation key
+
+        # Create an activation key
         lce = entities.LifecycleEnvironment(organization=cls.org.id).create()
         custom_repo = entities.Repository(
             product=entities.Product(organization=cls.org.id).create(),
         ).create()
         cv = entities.ContentView(
-                organization=cls.org.id,
-                repository=[custom_repo.id],
+            organization=cls.org.id,
+            repository=[custom_repo.id],
         ).create()
         cv.publish()
         cv = cv.read()
         promote(cv.version[0], environment_id=lce.id)
         cv = cv.read()
-        cls.ak = entities.ActivationKey(content_view=cv, organization=cls.org.id, environment=lce).create()
+        cls.ak = entities.ActivationKey(
+            content_view=cv, organization=cls.org.id, environment=lce).create()
 
-
-
-        # Get OS ID
-        arch = entities.Architecture().create()
+        # Set up an OS
         operating_sys = entities.OperatingSystem(architecture=[1]).create()
         print("Operating Sys ", operating_sys)
 
@@ -63,7 +57,7 @@ class BootstrapScriptTestCase(CLITestCase):
             organization=[cls.org],
                 ).create()
 
-        # create a host group
+        # Create a host group
         cls.hostgroup = entities.HostGroup(
             architecture=1,
             domain=[cls.domain.id],
@@ -96,8 +90,14 @@ class BootstrapScriptTestCase(CLITestCase):
         my_host.execute("curl -O http://{}/pub/bootstrap.py".format(settings.server.hostname))
         result = my_host.execute("python bootstrap.py -l admin -p changeme -s {} -o '{}' "
                         "-L '{}' -g {} -a {} --fqdn {} --force --add-domain"
-                        .format(settings.server.hostname, self.org.name, self.loc.name,
-                                self.hostgroup.name, self.ak.name, my_fqdn))
+                        .format(
+                            settings.server.hostname,
+                            self.org.name, self.loc.name,
+                            self.hostgroup.name,
+                            self.ak.name,
+                            my_fqdn
+                        )
+        )
         assert "The system has been registered" in result, 'Not registered'
         Container.delete(my_host)
 
@@ -131,10 +131,16 @@ class BootstrapScriptTestCase(CLITestCase):
         assert result.return_code == 0, 'Not registered'
         # register host again using bootstrap.py
         my_host.execute("curl -O http://{}/pub/bootstrap.py".format(settings.server.hostname))
-        my_host.execute("python bootstrap.py -l admin -p changeme -s {} -o '{}' "
+        result = my_host.execute("python bootstrap.py -l admin -p changeme -s {} -o '{}' "
                         "-L '{}' -g {} -a {} --fqdn {} --force --add-domain"
-                        .format(settings.server.hostname, self.org.name, self.loc.name,
-                                self.hostgroup.name, self.ak.name, my_fqdn))
+                        .format(
+                            settings.server.hostname,
+                            self.org.name, self.loc.name,
+                            self.hostgroup.name,
+                            self.ak.name,
+                            my_fqdn
+                        )
+        )
         # Check and assert the host is registered
         result = my_host.execute("subscription-manager status")
         assert result.return_code == 0, 'Not registered'
