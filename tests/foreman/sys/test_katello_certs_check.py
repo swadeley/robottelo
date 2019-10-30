@@ -19,9 +19,12 @@
 import os
 import re
 
+from fauxfactory import gen_string
+
 from robottelo.config import settings
-from robottelo.ssh import get_connection, upload_file
+from robottelo.ssh import get_connection, upload_file, download_file
 from robottelo.test import TestCase
+from robottelo.helpers import is_open
 from robottelo.decorators import (
     destructive,
     run_in_one_thread,
@@ -332,3 +335,67 @@ class KatelloCertsCheckTestCase(TestCase):
 
         :CaseAutomation: notautomated
         """
+
+    @tier1
+    def test_positive_validate_capsule_certificate(self):
+        """check that Capsules cert handles additional proxy names.
+
+        :id:8b53fc3d-704f-44f4-899e-74654529bfcf
+
+        :steps:
+
+            1. Generate a Capsule certificate
+            2. Confirm proxy server's FQDN for DNS is present
+            3. Confirm that format of alternative names does not include []
+
+        :expectedresults: Capsule certs has valid DNS values
+
+        :BZ: 1747581
+
+        :CaseAutomation: automated
+        """
+        DNS_Check = False
+        tmp_dir = '/var/tmp/{0}'.format(gen_string('alpha', 4))
+        cert_file = '{0}/ssl-build/capsule.example.com/cert-data'.format(tmp_dir)
+        if not os.path.exists('{0}/ssl-build/capsule.example.com/'.format(tmp_dir)):
+            os.makedirs('{0}/ssl-build/capsule.example.com/'.format(tmp_dir))
+        with get_connection(timeout=200) as connection:
+            result = connection.run(
+                'mkdir {0}'.format(tmp_dir))
+            assert result.return_code == 0, 'Create working directory failed.'
+            result = connection.run(
+                'capsule-certs-generate '
+                '--foreman-proxy-fqdn capsule.example.com '
+                '--certs-tar {0}/capsule_certs.tar '.format(tmp_dir), timeout=100)
+            # extract the cert from the tar file
+            result = connection.run('tar -xf {0}/capsule_certs.tar'
+                                    ' --directory {0}/ '.format(tmp_dir))
+            assert result.return_code == 0, 'Extraction to working directory failed.'
+            # Extract raw data from RPM to a file
+            result = connection.run(
+                'rpm2cpio {0}/ssl-build/capsule.example.com/'
+                'capsule.example.com-qpid-router-server*.rpm'
+                '>> {0}/ssl-build/capsule.example.com/cert-raw-data'
+                .format(tmp_dir))
+            # Extract the cert data from file cert-raw-data and write to cert-data
+            result = connection.run(
+                'openssl x509 -noout -text -in {0}/ssl-build/capsule.example.com/cert-raw-data'
+                '>> {0}/ssl-build/capsule.example.com/cert-data'.format(tmp_dir))
+            # use same location on remote and local for cert_file
+            download_file(cert_file)
+            # search the file for the line with DNS
+            with open(cert_file, "r") as file:
+                for line in file:
+                    if re.search(r'\bDNS:', line):
+                        self.logger.info('Found the line with alternative names for DNS')
+                        match = re.search(r'capsule.example.com', line)
+                        assert match, "No proxy name found."
+                        if is_open('BZ:1747581'):
+                            DNS_Check = True
+                        else:
+                            match = re.search(r'\[]', line)
+                            assert not match, "Incorrect parsing of alternative proxy name."
+                            DNS_Check = True
+                        break
+                    # if no match for "DNS:" found, then raise error.
+            assert DNS_Check, "Cannot find Subject Alternative Name"
