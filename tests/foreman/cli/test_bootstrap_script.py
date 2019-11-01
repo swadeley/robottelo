@@ -33,11 +33,12 @@ class BootstrapScriptTestCase(CLITestCase):
         cls.org = entities.Organization().create()
         cls.loc = entities.Location(organization=[cls.org]).create()
 
-        # Create an activation key
+        # Create essentials for an activation key
         lce = entities.LifecycleEnvironment(organization=cls.org.id).create()
         custom_repo = entities.Repository(
             product=entities.Product(organization=cls.org.id).create(),
         ).create()
+        custom_repo.sync()
         cv = entities.ContentView(
             organization=cls.org.id,
             repository=[custom_repo.id],
@@ -46,12 +47,29 @@ class BootstrapScriptTestCase(CLITestCase):
         cv = cv.read()
         promote(cv.version[0], environment_id=lce.id)
         cv = cv.read()
+        # Create an activation key and set it to not auto-attach so we can use any repo
         cls.ak = entities.ActivationKey(
-            content_view=cv, organization=cls.org.id, environment=lce).create()
+            environment=cls.org.library,
+            auto_attach=False, content_view=cv, organization=cls.org.id,
+            ).create()
+
+        prod = custom_repo.product.read()
+        subs = entities.Subscription().search(
+            query={'search': 'name={0}'.format(prod.name)}
+        )
+
+        cls.ak.add_subscriptions(data={'subscriptions': [{'id': subs[0].id}]})
+
+        # Search for SmartProxy
+        proxy = entities.SmartProxy().search(
+            query={
+                u'search': u'name={0}'.format(
+                    settings.server.hostname)
+                }
+            )
 
         # Set up an OS
         operating_sys = entities.OperatingSystem(architecture=[1]).create()
-        print("Operating Sys ", operating_sys)
 
         cls.domain = entities.Domain(
             location=[cls.loc],
@@ -61,8 +79,11 @@ class BootstrapScriptTestCase(CLITestCase):
         # Create a host group
         cls.hostgroup = entities.HostGroup(
             architecture=1,
+            content_source=proxy[0].id,
             domain=[cls.domain.id],
             location=[cls.loc],
+            content_view=cv,
+            lifecycle_environment=lce.id,
             organization=[cls.org],
             operatingsystem=operating_sys,
                 ).create()
