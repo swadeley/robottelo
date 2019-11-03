@@ -17,10 +17,27 @@
 """
 from nailgun import entities
 from robottelo.decorators import stubbed, tier1, tier4, upgrade
-from robottelo.api.utils import promote
+from robottelo import manifests
+from robottelo.api.utils import (
+    promote, check_create_os_with_title,
+     enable_rhrepo_and_fetchid, upload_manifest
+)
 from robottelo.test import CLITestCase
 from robottelo.config import settings
 from robottelo.containers import Container
+from robottelo.constants import (
+    DEFAULT_ARCHITECTURE,
+    DEFAULT_PTABLE,
+    DEFAULT_PXE_TEMPLATE,
+    DEFAULT_TEMPLATE,
+    FAKE_1_YUM_REPO,
+    REPO_TYPE,
+    RHEL_6_MAJOR_VERSION,
+    RHEL_7_MAJOR_VERSION,
+    REPOS,
+    PRDS,
+    REPOSET,
+)
 
 
 class BootstrapScriptTestCase(CLITestCase):
@@ -33,29 +50,39 @@ class BootstrapScriptTestCase(CLITestCase):
         cls.org = entities.Organization().create()
         cls.loc = entities.Location(organization=[cls.org]).create()
 
+        # Clone manifest to get RHEL7 subs
+        with manifests.clone() as manifest:
+            upload_manifest(cls.org.id, manifest.content)
+        rh_repo_id = enable_rhrepo_and_fetchid(
+            basearch='x86_64',
+            org_id=cls.org.id,
+            product=PRDS['rhel'],
+            reposet=REPOSET['rhel7'],
+            repo=REPOS['rhel7']['name'],
+            releasever='7Server',
+        )
+        rh_repo = entities.Repository(id=rh_repo_id).read()
+
         # Create essentials for an activation key
         lce = entities.LifecycleEnvironment(organization=cls.org.id).create()
-        custom_repo = entities.Repository(
-            product=entities.Product(organization=cls.org.id).create(),
-        ).create()
-        custom_repo.sync()
         cv = entities.ContentView(
             organization=cls.org.id,
-            repository=[custom_repo.id],
+            repository=[rh_repo],
         ).create()
         cv.publish()
         cv = cv.read()
         promote(cv.version[0], environment_id=lce.id)
         cv = cv.read()
+
         # Create an activation key and set it to not auto-attach so we can use any repo
         cls.ak = entities.ActivationKey(
             environment=cls.org.library,
             auto_attach=False, content_view=cv, organization=cls.org.id,
             ).create()
 
-        prod = custom_repo.product.read()
+        prod = rh_repo.product.read()
         subs = entities.Subscription().search(
-            query={'search': 'name={0}'.format(prod.name)}
+            query={'search': 'name~{0}'.format(prod.name)}
         )
 
         cls.ak.add_subscriptions(data={'subscriptions': [{'id': subs[0].id}]})
@@ -68,8 +95,19 @@ class BootstrapScriptTestCase(CLITestCase):
                 }
             )
 
-        # Set up an OS
-        operating_sys = entities.OperatingSystem(architecture=[1]).create()
+
+        # Get the arch ID
+        architecture = entities.Architecture().search(
+            query={
+                u'search': u'name="{0}"'.format(DEFAULT_ARCHITECTURE)
+           }
+        )[0].read()
+
+        # Create the OS 
+        os = entities.OperatingSystem().search(query={
+            u'search': u'name="RedHat" AND (major="{0}")'
+            .format(RHEL_7_MAJOR_VERSION)
+            })[0].read()
 
         cls.domain = entities.Domain(
             location=[cls.loc],
@@ -78,14 +116,14 @@ class BootstrapScriptTestCase(CLITestCase):
 
         # Create a host group
         cls.hostgroup = entities.HostGroup(
-            architecture=1,
+            architecture=architecture,
             content_source=proxy[0].id,
             domain=[cls.domain.id],
             location=[cls.loc],
             content_view=cv,
             lifecycle_environment=lce.id,
             organization=[cls.org],
-            operatingsystem=operating_sys,
+            operatingsystem=os,
                 ).create()
 
     @tier4
@@ -162,7 +200,7 @@ class BootstrapScriptTestCase(CLITestCase):
                                      self.ak.name,
                                      my_fqdn
                                  )
-         )
+        )
         # Check and assert the host is registered
         result = my_host.execute("subscription-manager status")
         assert result.return_code == 0, 'Not registered'
