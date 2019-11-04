@@ -19,20 +19,13 @@ from nailgun import entities
 from robottelo.decorators import stubbed, tier1, tier4, upgrade
 from robottelo import manifests
 from robottelo.api.utils import (
-    promote, check_create_os_with_title,
-     enable_rhrepo_and_fetchid, upload_manifest
-)
+    promote, enable_rhrepo_and_fetchid, upload_manifest
+    )
 from robottelo.test import CLITestCase
 from robottelo.config import settings
 from robottelo.containers import Container
 from robottelo.constants import (
     DEFAULT_ARCHITECTURE,
-    DEFAULT_PTABLE,
-    DEFAULT_PXE_TEMPLATE,
-    DEFAULT_TEMPLATE,
-    FAKE_1_YUM_REPO,
-    REPO_TYPE,
-    RHEL_6_MAJOR_VERSION,
     RHEL_7_MAJOR_VERSION,
     REPOS,
     PRDS,
@@ -95,15 +88,14 @@ class BootstrapScriptTestCase(CLITestCase):
                 }
             )
 
-
         # Get the arch ID
         architecture = entities.Architecture().search(
             query={
                 u'search': u'name="{0}"'.format(DEFAULT_ARCHITECTURE)
-           }
+                   }
         )[0].read()
 
-        # Create the OS 
+        # Create the OS
         os = entities.OperatingSystem().search(query={
             u'search': u'name="RedHat" AND (major="{0}")'
             .format(RHEL_7_MAJOR_VERSION)
@@ -156,8 +148,8 @@ class BootstrapScriptTestCase(CLITestCase):
                                      self.hostgroup.name,
                                      self.ak.name,
                                      my_fqdn
+                                         )
                                  )
-         )
         assert "The system has been registered" in result, 'Not registered'
         Container.delete(my_host)
 
@@ -184,12 +176,7 @@ class BootstrapScriptTestCase(CLITestCase):
         my_host = Container(agent=True)
         host_name = my_host.execute("hostname")
         my_fqdn = host_name.strip() + '.' + self.domain.name + '.' 'com'
-        my_host.register('{},{}'.format(settings.server.hostname, self.ak.name))
-        my_host.execute("subscription-manager attach --auto")
-        # Check and assert the host is registered
-        result = my_host.execute("subscription-manager status")
-        assert result.return_code == 0, 'Not registered'
-        # register host again using bootstrap.py
+        # Register host the first time
         my_host.execute("curl -O http://{}/pub/bootstrap.py".format(settings.server.hostname))
         result = my_host.execute("python bootstrap.py -l admin -p changeme -s {} -o '{}' "
                                  "-L '{}' -g {} -a {} --fqdn {} --force --add-domain"
@@ -199,11 +186,26 @@ class BootstrapScriptTestCase(CLITestCase):
                                      self.hostgroup.name,
                                      self.ak.name,
                                      my_fqdn
+                                         )
                                  )
-        )
-        # Check and assert the host is registered
+        my_host.execute("subscription-manager attach --auto")
+        # Check and assert the host is registered and has valid subscription
         result = my_host.execute("subscription-manager status")
-        assert result.return_code == 0, 'Not registered'
+        assert "Overall Status: Current" in result, 'Not registered'
+        # register host again using bootstrap.py
+        result = my_host.execute("python bootstrap.py -l admin -p changeme -s {} -o '{}' "
+                                 "-L '{}' -g {} -a {} --fqdn {} --force"
+                                 .format(
+                                     settings.server.hostname,
+                                     self.org.name, self.loc.name,
+                                     self.hostgroup.name,
+                                     self.ak.name,
+                                     my_fqdn
+                                         )
+                                 )
+        # Check and assert the host is registered and has valid subscription
+        result = my_host.execute("subscription-manager status")
+        assert "Overall Status: Current" in result, 'Not registered'
         Container.delete(my_host)
 
     @tier1
