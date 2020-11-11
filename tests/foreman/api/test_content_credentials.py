@@ -1,6 +1,6 @@
 """Unit tests for the ``gpgkeys`` paths.
 
-:Requirement: Gpgkey
+:Requirement: ContentCredential
 
 :CaseAutomation: Automated
 
