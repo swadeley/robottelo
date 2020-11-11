@@ -22,212 +22,224 @@ from requests import HTTPError
 from robottelo.constants import VALID_GPG_KEY_BETA_FILE
 from robottelo.constants import VALID_GPG_KEY_FILE
 from robottelo.datafactory import invalid_values_list
+from robottelo.datafactory import parametrized
 from robottelo.datafactory import valid_data_list
 from robottelo.helpers import read_data_file
-from robottelo.test import APITestCase
 
 
-class GPGKeyTestCase(APITestCase):
-    """Tests for ``katello/api/v2/gpg_keys``."""
+key_content = read_data_file(VALID_GPG_KEY_FILE)
 
-    @classmethod
-    def setUpClass(cls):
-        """Create an organization which can be re-used in tests."""
-        super().setUpClass()
-        cls.org = entities.Organization().create()
-        cls.key_content = read_data_file(VALID_GPG_KEY_FILE)
 
-    @pytest.mark.tier1
-    def test_positive_search_in_org(self):
-        """Search for a GPG key and specify just ``organization_id``.
+@pytest.mark.tier1
+def test_positive_search_in_org(module_org):
+    """Search for a GPG key and specify just ``organization_id``.
 
-        :id: ff5e047c-404b-4379-8d28-3ad8cb39b6a9
+    :id: ff5e047c-404b-4379-8d28-3ad8cb39b6a9
 
-        :Steps:
+    :Steps:
 
-            1. Create an organization.
-            2. Create a GPG key belonging to the organization.
-            3. Search for GPG keys in the organization.
+        1. Create a GPG key belonging to the organization.
+        2. Search for GPG keys in the organization.
 
-        :expectedresults: Only one GPG key is in the search results: the
-            created GPG key.
+    :expectedresults: Only one GPG key is in the search results: the
+        created GPG key.
 
-        :CaseImportance: Critical
-        """
-        org = entities.Organization().create()
-        gpg_key = entities.GPGKey(organization=org).create()
-        gpg_keys = gpg_key.search({'organization'})
-        self.assertEqual(len(gpg_keys), 1)
-        self.assertEqual(gpg_key.id, gpg_keys[0].id)
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(organization=module_org).create()
+    gpg_keys = gpg_key.search({'organization'})
+    assert len(gpg_keys) == 1
+    assert gpg_key.id == gpg_keys[0].id
 
-    @pytest.mark.tier1
-    def test_positive_create_with_name(self):
-        """Create a GPG key with valid name.
 
-        :id: 741d969b-28ef-481f-bcf7-ed4cd920b030
+@pytest.mark.parametrize('name', **parametrized(valid_data_list()))
+@pytest.mark.tier1
+def test_positive_create_with_name(module_org, name):
+    """Create a GPG key with valid name.
 
-        :expectedresults: A GPG key is created with the given name.
+    :id: 741d969b-28ef-481f-bcf7-ed4cd920b030
 
-        :CaseImportance: Critical
-        """
-        for name in valid_data_list():
-            with self.subTest(name):
-                gpg_key = entities.GPGKey(organization=self.org, name=name).create()
-                self.assertEqual(name, gpg_key.name)
+    :parametrized: yes
 
-    @pytest.mark.tier1
-    def test_positive_create_with_content(self):
-        """Create a GPG key with valid name and valid gpg key text.
+    :expectedresults: A GPG key is created with the given name.
 
-        :id: cfa6690e-fed7-49cf-94f9-fd2deed941c0
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(organization=module_org, name=name).create()
+    assert name == gpg_key.name
 
-        :expectedresults: A GPG key is created with the expected content.
 
-        :CaseImportance: Critical
-        """
-        gpg_key = entities.GPGKey(organization=self.org, content=self.key_content).create()
-        self.assertEqual(self.key_content, gpg_key.content)
+@pytest.mark.tier1
+def test_positive_create_with_content(module_org):
+    """Create a GPG key with valid name and valid gpg key text.
 
-    @pytest.mark.tier1
-    def test_negative_create_name(self):
-        """Attempt to create GPG key with invalid names only.
+    :id: cfa6690e-fed7-49cf-94f9-fd2deed941c0
 
-        :id: 904a3ed0-7d50-495e-a700-b4f1ae913599
+    :expectedresults: A GPG key is created with the expected content.
 
-        :expectedresults: A GPG key is not created and error is raised.
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(organization=module_org, content=key_content).create()
+    assert key_content == gpg_key.content
 
-        :CaseImportance: Critical
-        """
-        for name in invalid_values_list():
-            with self.subTest(name):
-                with self.assertRaises(HTTPError):
-                    entities.GPGKey(name=name).create()
 
-    @pytest.mark.tier1
-    def test_negative_create_with_same_name(self):
-        """Attempt to create a GPG key providing a name of already existent
-        entity
+@pytest.mark.parametrize('name', **parametrized(invalid_values_list()))
+@pytest.mark.tier1
+def test_negative_create_name(module_org, name):
+    """Attempt to create GPG key with invalid names only.
 
-        :id: 78299f13-5977-4409-9bc7-844e54349926
+    :id: 904a3ed0-7d50-495e-a700-b4f1ae913599
 
-        :expectedresults: A GPG key is not created and error is raised.
+    :parametrized: yes
 
-        :CaseImportance: Critical
-        """
-        name = gen_string('alphanumeric')
-        entities.GPGKey(organization=self.org, name=name).create()
-        with self.assertRaises(HTTPError):
-            entities.GPGKey(organization=self.org, name=name).create()
+    :expectedresults: A GPG key is not created and 422 error is raised.
 
-    @pytest.mark.tier1
-    def test_negative_create_with_content(self):
-        """Attempt to create GPG key with empty content.
+    :CaseImportance: Critical
+    """
+    with pytest.raises(HTTPError) as error:
+        entities.GPGKey(organization=module_org, name=name).create()
+    assert error.value.response.status_code == 422
 
-        :id: fc79c840-6bcb-4d97-9145-c0008d5b028d
 
-        :expectedresults: A GPG key is not created and error is raised.
+@pytest.mark.tier1
+def test_negative_create_with_same_name(module_org):
+    """Attempt to create a GPG key providing a name of already existent
+    entity
 
-        :CaseImportance: Critical
-        """
-        with self.assertRaises(HTTPError):
-            entities.GPGKey(content='').create()
+    :id: 78299f13-5977-4409-9bc7-844e54349926
 
-    @pytest.mark.tier1
-    def test_positive_update_name(self):
-        """Update GPG key name to another valid name.
+    :expectedresults: A GPG key is not created and 422 error is raised.
 
-        :id: 9868025d-5346-42c9-b850-916ce37a9541
+    :CaseImportance: Critical
+    """
+    name = gen_string('alphanumeric')
+    entities.GPGKey(organization=module_org, name=name).create()
+    with pytest.raises(HTTPError) as error:
+        entities.GPGKey(organization=module_org, name=name).create()
+    assert error.value.response.status_code == 422
 
-        :expectedresults: The GPG key name can be updated.
 
-        :CaseImportance: Critical
-        """
-        gpg_key = entities.GPGKey(organization=self.org).create()
-        for new_name in valid_data_list():
-            with self.subTest(new_name):
-                gpg_key.name = new_name
-                gpg_key = gpg_key.update(['name'])
-                self.assertEqual(new_name, gpg_key.name)
+@pytest.mark.tier1
+def test_negative_create_with_content(module_org):
+    """Attempt to create GPG key with empty content.
 
-    @pytest.mark.tier1
-    def test_positive_update_content(self):
-        """Update GPG key content text to another valid one.
+    :id: fc79c840-6bcb-4d97-9145-c0008d5b028d
 
-        :id: 62fdaf55-c931-4be6-9857-68cc816046ad
+    :expectedresults: A GPG key is not created and 422 error is raised.
 
-        :expectedresults: The GPG key content text can be updated.
+    :CaseImportance: Critical
+    """
+    with pytest.raises(HTTPError) as error:
+        entities.GPGKey(organization=module_org, content='').create()
+    assert error.value.response.status_code == 422
 
-        :CaseImportance: Critical
-        """
-        gpg_key = entities.GPGKey(
-            organization=self.org, content=read_data_file(VALID_GPG_KEY_BETA_FILE)
-        ).create()
-        gpg_key.content = self.key_content
-        gpg_key = gpg_key.update(['content'])
-        self.assertEqual(self.key_content, gpg_key.content)
 
-    @pytest.mark.tier1
-    def test_negative_update_name(self):
-        """Attempt to update GPG key name to invalid one
+@pytest.mark.parametrize('new_name', **parametrized(valid_data_list()))
+@pytest.mark.tier1
+def test_positive_update_name(module_org, new_name):
+    """Update GPG key name to another valid name.
 
-        :id: 1a43f610-8969-4f08-967f-fb6af0fca31b
+    :id: 9868025d-5346-42c9-b850-916ce37a9541
 
-        :expectedresults: GPG key is not updated
+    :parametrized: yes
 
-        :CaseImportance: Critical
-        """
-        gpg_key = entities.GPGKey(organization=self.org).create()
-        for new_name in invalid_values_list():
-            gpg_key.name = new_name
-            with self.subTest(new_name):
-                with self.assertRaises(HTTPError):
-                    gpg_key.update(['name'])
+    :expectedresults: The GPG key name can be updated.
 
-    @pytest.mark.tier1
-    def test_negative_update_same_name(self):
-        """Attempt to update GPG key name to the name of existing GPG key
-        entity
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(organization=module_org).create()
+    gpg_key.name = new_name
+    gpg_key = gpg_key.update(['name'])
+    assert new_name == gpg_key.name
 
-        :id: e294e3b2-1125-4ad9-969a-eb3f1966419e
 
-        :expectedresults: GPG key is not updated
+@pytest.mark.tier1
+def test_positive_update_content(module_org):
+    """Update GPG key content text to another valid one.
 
-        :CaseImportance: Critical
-        """
-        name = gen_string('alpha')
-        entities.GPGKey(organization=self.org, name=name).create()
-        new_gpg_key = entities.GPGKey(organization=self.org).create()
-        new_gpg_key.name = name
-        with self.assertRaises(HTTPError):
-            new_gpg_key.update(['name'])
+    :id: 62fdaf55-c931-4be6-9857-68cc816046ad
 
-    @pytest.mark.tier1
-    def test_negative_update_content(self):
-        """Attempt to update GPG key content to invalid one
+    :expectedresults: The GPG key content text can be updated.
 
-        :id: fee30ef8-370a-4fdd-9e45-e7ab95dade8b
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(
+        organization=module_org, content=read_data_file(VALID_GPG_KEY_BETA_FILE)
+    ).create()
+    gpg_key.content = key_content
+    gpg_key = gpg_key.update(['content'])
+    assert key_content == gpg_key.content
 
-        :expectedresults: GPG key is not updated
 
-        :CaseImportance: Critical
-        """
-        gpg_key = entities.GPGKey(organization=self.org, content=self.key_content).create()
-        gpg_key.content = ''
-        with self.assertRaises(HTTPError):
-            gpg_key.update(['content'])
-        self.assertEqual(self.key_content, gpg_key.read().content)
+@pytest.mark.parametrize('new_name', **parametrized(invalid_values_list()))
+@pytest.mark.tier1
+def test_negative_update_name(module_org, new_name):
+    """Attempt to update GPG key name to invalid one
 
-    @pytest.mark.tier1
-    def test_positive_delete(self):
-        """Create a GPG key with different names and then delete it.
+    :id: 1a43f610-8969-4f08-967f-fb6af0fca31b
 
-        :id: b06d211f-2827-40f7-b627-8b1fbaee2eb4
+    :parametrized: yes
 
-        :expectedresults: The GPG key deleted successfully.
+    :expectedresults: GPG key is not updated and 422 error is raised.
 
-        :CaseImportance: Critical
-        """
-        gpg_key = entities.GPGKey(organization=self.org).create()
-        gpg_key.delete()
-        with self.assertRaises(HTTPError):
-            gpg_key.read()
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(organization=module_org).create()
+    gpg_key.name = new_name
+    with pytest.raises(HTTPError) as error:
+        gpg_key.update(['name'])
+    assert error.value.response.status_code == 422
+
+
+@pytest.mark.tier1
+def test_negative_update_same_name(module_org):
+    """Attempt to update GPG key name to the name of existing GPG key
+    entity
+
+    :id: e294e3b2-1125-4ad9-969a-eb3f1966419e
+
+    :expectedresults: GPG key is not updated and 422 error is raised.
+
+    :CaseImportance: Critical
+    """
+    name = gen_string('alpha')
+    entities.GPGKey(organization=module_org, name=name).create()
+    new_gpg_key = entities.GPGKey(organization=module_org).create()
+    new_gpg_key.name = name
+    with pytest.raises(HTTPError) as error:
+        new_gpg_key.update(['name'])
+    assert error.value.response.status_code == 422
+
+
+@pytest.mark.tier1
+def test_negative_update_content(module_org):
+    """Attempt to update GPG key content to invalid one
+
+    :id: fee30ef8-370a-4fdd-9e45-e7ab95dade8b
+
+    :expectedresults: GPG key is not updated and 422 error is raised.
+
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(organization=module_org, content=key_content).create()
+    gpg_key.content = ''
+    with pytest.raises(HTTPError) as error:
+        gpg_key.update(['content'])
+    assert key_content == gpg_key.read().content
+    assert error.value.response.status_code == 422
+
+
+@pytest.mark.tier1
+def test_positive_delete(module_org):
+    """Create a GPG key with different names and then delete it.
+
+    :id: b06d211f-2827-40f7-b627-8b1fbaee2eb4
+
+    :expectedresults: The GPG key deleted successfully.
+
+    :CaseImportance: Critical
+    """
+    gpg_key = entities.GPGKey(organization=module_org).create()
+    gpg_key.delete()
+    with pytest.raises(HTTPError):
+        gpg_key.read()
