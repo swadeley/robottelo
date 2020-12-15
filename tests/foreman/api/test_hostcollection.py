@@ -21,7 +21,6 @@ import pytest
 from nailgun import entities
 from requests.exceptions import HTTPError
 
-from robottelo.api.utils import promote
 from robottelo.constants import DISTRO_RHEL7
 from robottelo.datafactory import invalid_values_list
 from robottelo.datafactory import parametrized
@@ -34,14 +33,6 @@ def fake_hosts(module_org):
     """Create content hosts that can be shared by tests."""
     hosts = [entities.Host(organization=module_org).create() for _ in range(2)]
     return hosts
-
-
-@pytest.fixture(scope='module')
-def content_view(module_org, module_lce, module_published_cv):
-    content_view = module_published_cv
-    content_view = content_view.read()
-    promote(content_view.version[0], environment_id=module_lce.id)
-    return content_view
 
 
 @pytest.mark.parametrize('name', **parametrized(valid_data_list()))
@@ -410,7 +401,7 @@ def test_negative_create_with_invalid_name(module_org, name):
 
 @pytest.mark.tier1
 def test_positive_add_remove_subscription(
-    module_org, module_lce, fake_hosts, content_view, module_activation_key
+    module_org, module_lce, fake_hosts, module_promoted_cv, module_activation_key
 ):
     """Try to bulk add and remove a subscription to members of a host collection.
 
