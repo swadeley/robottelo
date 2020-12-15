@@ -15,6 +15,7 @@
 :Upstream: No
 """
 from random import choice
+from random import randint
 
 import pytest
 from nailgun import entities
@@ -41,14 +42,6 @@ def content_view(module_org, module_lce, module_published_cv):
     content_view = content_view.read()
     promote(content_view.version[0], environment_id=module_lce.id)
     return content_view
-
-
-@pytest.fixture(scope='module')
-def activation_key(module_org, module_published_cv, module_lce):
-    activation_key = entities.ActivationKey(
-        content_view=module_published_cv, environment=module_lce, organization=module_org
-    ).create()
-    return activation_key
 
 
 @pytest.mark.parametrize('name', **parametrized(valid_data_list()))
@@ -89,7 +82,7 @@ def test_positive_list(module_org):
 
 
 @pytest.mark.tier1
-def test_positive_list_for_organization(module_org):
+def test_positive_list_for_organization():
     """Create host collection for specific organization. Retrieve list of
     host collections for that organization
 
@@ -136,7 +129,8 @@ def test_positive_create_with_limit(module_org):
 
     :CaseImportance: Critical
     """
-    for limit in (1, 3, 5, 10, 20):
+    for _ in range(5):
+        limit = randint(1, 30)
         host_collection = entities.HostCollection(
             max_hosts=limit, organization=module_org
         ).create()
@@ -415,14 +409,16 @@ def test_negative_create_with_invalid_name(module_org, name):
 
 
 @pytest.mark.tier1
-def test_positive_add_remove_subscription(module_org, module_lce, fake_hosts, content_view):
+def test_positive_add_remove_subscription(
+    module_org, module_lce, fake_hosts, content_view, module_activation_key
+):
     """Try to bulk add and remove a subscription to members of a host collection.
 
     :id: c4ec5727-eb25-452e-a91f-87cafb16666b
 
     :steps:
 
-        1. Create AK and HC, add AK to HC
+        1. Create HC, add AK to HC
         2. Create product so we can use it's subscription
         3. Create some VMs and register them with AK so they are in HC
         4. Add the subscription to the members of the Host Collection
@@ -434,14 +430,12 @@ def test_positive_add_remove_subscription(module_org, module_lce, fake_hosts, co
 
     :CaseImportance: Critical
     """
-    # Create an activate key for this test
-    act_key = entities.ActivationKey(
-        content_view=content_view, environment=module_lce, organization=module_org
-    ).create()
     # this command creates a host collection and "appends", makes available, to the AK
-    act_key.host_collection.append(entities.HostCollection(organization=module_org).create())
+    module_activation_key.host_collection.append(
+        entities.HostCollection(organization=module_org).create()
+    )
     # Move HC from Add tab to List tab on AK view
-    act_key = act_key.update(['host_collection'])
+    module_activation_key = module_activation_key.update(['host_collection'])
     # Create a product so we have a subscription to use
     product = entities.Product(organization=module_org).create()
     prod_name = product.name
@@ -452,9 +446,9 @@ def test_positive_add_remove_subscription(module_org, module_lce, fake_hosts, co
     ) as client2:
         for client in [client1, client2]:
             client.install_katello_ca()
-            client.register_contenthost(module_org.label, act_key.name)
+            client.register_contenthost(module_org.label, module_activation_key.name)
         # Read host_collection back from Satellite to get host_ids
-        host_collection = act_key.host_collection[0].read()
+        host_collection = module_activation_key.host_collection[0].read()
         host_ids = [host.id for host in host_collection.host]
         # Add subscription
         # Call nailgun to make the API PUT to members of Host Collection

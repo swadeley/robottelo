@@ -423,6 +423,14 @@ def default_contentview(module_org):
     )
 
 
+@pytest.fixture(scope='module')
+def module_activation_key(module_org, module_published_cv, module_lce):
+    activation_key = entities.ActivationKey(
+        content_view=module_published_cv, environment=module_lce, organization=module_org
+    ).create()
+    return activation_key
+
+
 @pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
 @pytest.fixture(scope='module')
 def module_cv_with_puppet_module(module_org):
