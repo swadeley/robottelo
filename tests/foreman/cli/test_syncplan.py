@@ -457,6 +457,10 @@ def test_positive_synchronize_custom_product_past_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo['id'], repo_name=repo['name'])
     validate_repo_content(repo, ['errata', 'package-groups', 'packages'])
+    # Disable sync plan after the test to reduce load on Satellite
+    SyncPlan.update({'id': sync_plan['id'], 'enabled': 'false'})
+    result = SyncPlan.info({'id': sync_plan['id']})
+    assert result['enabled'] == 'no'
 
 
 @pytest.mark.tier4
@@ -509,6 +513,10 @@ def test_positive_synchronize_custom_product_future_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo['id'], repo_name=repo['name'])
     validate_repo_content(repo, ['errata', 'package-groups', 'packages'])
+    # Disable sync plan after the test to reduce load on Satellite
+    SyncPlan.update({'id': sync_plan['id'], 'enabled': 'false'})
+    result = SyncPlan.info({'id': sync_plan['id']})
+    assert result['enabled'] == 'no'
 
 
 @pytest.mark.tier4
@@ -561,6 +569,10 @@ def test_positive_synchronize_custom_products_future_sync_date(module_org):
     for repo in repos:
         validate_task_status(repo['id'], repo_name=repo['name'])
         validate_repo_content(repo, ['errata', 'package-groups', 'packages'])
+    # Disable sync plan after the test to reduce load on Satellite
+    SyncPlan.update({'id': sync_plan['id'], 'enabled': 'false'})
+    result = SyncPlan.info({'id': sync_plan['id']})
+    assert result['enabled'] == 'no'
 
 
 @pytest.mark.run_in_one_thread
@@ -629,6 +641,10 @@ def test_positive_synchronize_rh_product_past_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo['id'], repo_name=repo['name'])
     validate_repo_content(repo, ['errata', 'packages'])
+    # Disable sync plan after the test to reduce load on Satellite
+    SyncPlan.update({'id': sync_plan['id'], 'enabled': 'false'})
+    result = SyncPlan.info({'id': sync_plan['id']})
+    assert result['enabled'] == 'no'
 
 
 @pytest.mark.run_in_one_thread
@@ -699,6 +715,10 @@ def test_positive_synchronize_rh_product_future_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo['id'], repo_name=repo['name'])
     validate_repo_content(repo, ['errata', 'packages'])
+    # Disable sync plan after the test to reduce load on Satellite
+    SyncPlan.update({'id': sync_plan['id'], 'enabled': 'false'})
+    result = SyncPlan.info({'id': sync_plan['id']})
+    assert result['enabled'] == 'no'
 
 
 @pytest.mark.tier3
@@ -747,6 +767,10 @@ def test_positive_synchronize_custom_product_daily_recurrence(module_org):
     # Verify product was synced successfully
     validate_task_status(repo['id'], repo_name=repo['name'])
     validate_repo_content(repo, ['errata', 'package-groups', 'packages'])
+    # Disable sync plan after the test to reduce load on Satellite
+    SyncPlan.update({'id': sync_plan['id'], 'enabled': 'false'})
+    result = SyncPlan.info({'id': sync_plan['id']})
+    assert result['enabled'] == 'no'
 
 
 @pytest.mark.tier3
@@ -796,3 +820,7 @@ def test_positive_synchronize_custom_product_weekly_recurrence(module_org):
     # Verify product was synced successfully
     validate_task_status(repo['id'], repo_name=repo['name'])
     validate_repo_content(repo, ['errata', 'package-groups', 'packages'])
+    # Disable sync plan after the test to reduce load on Satellite
+    SyncPlan.update({'id': sync_plan['id'], 'enabled': 'false'})
+    result = SyncPlan.info({'id': sync_plan['id']})
+    assert result['enabled'] == 'no'

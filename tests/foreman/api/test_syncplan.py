@@ -639,6 +639,10 @@ def test_negative_synchronize_custom_product_past_sync_date(module_org):
     with pytest.raises(AssertionError):
         validate_task_status(repo.id, max_tries=2)
     validate_repo_content(repo, ['erratum', 'package', 'package_group'], after_sync=False)
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.tier4
@@ -680,6 +684,10 @@ def test_positive_synchronize_custom_product_past_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo.id, repo_backend_id=repo.backend_identifier)
     validate_repo_content(repo, ['erratum', 'package', 'package_group'])
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.tier4
@@ -725,6 +733,10 @@ def test_positive_synchronize_custom_product_future_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo.id, repo_backend_id=repo.backend_identifier)
     validate_repo_content(repo, ['erratum', 'package', 'package_group'])
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.tier4
@@ -774,6 +786,10 @@ def test_positive_synchronize_custom_products_future_sync_date(module_org):
     for repo in repos:
         validate_task_status(repo.id, repo_backend_id=repo.backend_identifier)
         validate_repo_content(repo, ['erratum', 'package', 'package_group'])
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.run_in_one_thread
@@ -829,6 +845,10 @@ def test_positive_synchronize_rh_product_past_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo.id, repo_backend_id=repo.backend_identifier)
     validate_repo_content(repo, ['erratum', 'package', 'package_group'])
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.run_in_one_thread
@@ -887,6 +907,10 @@ def test_positive_synchronize_rh_product_future_sync_date(module_org):
     # Verify product was synced successfully
     validate_task_status(repo.id, repo_backend_id=repo.backend_identifier)
     validate_repo_content(repo, ['erratum', 'package', 'package_group'])
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.tier3
@@ -923,6 +947,10 @@ def test_positive_synchronize_custom_product_daily_recurrence(module_org):
     # Verify product was synced successfully
     validate_task_status(repo.id, repo_backend_id=repo.backend_identifier)
     validate_repo_content(repo, ['erratum', 'package', 'package_group'])
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.tier3
@@ -963,6 +991,10 @@ def test_positive_synchronize_custom_product_weekly_recurrence(module_org):
     # Verify product was synced successfully
     validate_task_status(repo.id, repo_backend_id=repo.backend_identifier)
     validate_repo_content(repo, ['erratum', 'package', 'package_group'])
+    # Disable sync plan after the test to reduce load on Satellite
+    sync_plan.enabled = False
+    sync_plan = sync_plan.update(['enabled'])
+    assert sync_plan.enabled is False
 
 
 @pytest.mark.tier2
