@@ -47,6 +47,12 @@ def module_org():
 
 
 @pytest.fixture(scope='module')
+def orgs(request):
+    num = getattr(request, 'param', 2)
+    return [entities.Organization().create() for i in range(num)]
+
+
+@pytest.fixture(scope='module')
 def module_location(module_org):
     return entities.Location(organization=[module_org]).create()
 
@@ -421,6 +427,14 @@ def default_contentview(module_org):
     return entities.ContentView().search(
         query={'search': 'label=Default_Organization_View', 'organization_id': f'{module_org.id}'}
     )
+
+
+@pytest.fixture(scope='module')
+def module_activation_key(module_org, module_published_cv):
+    module_activation_key = entities.ActivationKey(
+        content_view=module_published_cv, organization=module_org
+    ).create()
+    return module_activation_key
 
 
 @pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
