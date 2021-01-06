@@ -164,8 +164,7 @@ def test_positive_create_with_host(module_org, fake_hosts):
 
     :BZ: 1325989
     """
-    hosts = fake_hosts
-    host_collection = entities.HostCollection(host=[hosts[0]], organization=module_org).create()
+    host_collection = entities.HostCollection(host=[fake_hosts[0]], organization=module_org).create()
     assert len(host_collection.host) == 1
 
 
@@ -182,9 +181,8 @@ def test_positive_create_with_hosts(module_org, fake_hosts):
 
     :BZ: 1325989
     """
-    hosts = fake_hosts
-    host_collection = entities.HostCollection(host=hosts, organization=module_org).create()
-    assert len(host_collection.host) == len(hosts)
+    host_collection = entities.HostCollection(host=fake_hosts, organization=module_org).create()
+    assert len(host_collection.host) == len(fake_hosts)
 
 
 @pytest.mark.tier2
@@ -199,9 +197,8 @@ def test_positive_add_host(module_org, fake_hosts):
 
     :BZ:1325989
     """
-    hosts = fake_hosts
     host_collection = entities.HostCollection(organization=module_org).create()
-    host_collection.host_ids = [hosts[0].id]
+    host_collection.host_ids = [fake_hosts[0].id]
     host_collection = host_collection.update(['host_ids'])
     assert len(host_collection.host) == 1
 
@@ -219,14 +216,13 @@ def test_positive_add_hosts(module_org, fake_hosts):
 
     :BZ: 1325989
     """
-    hosts = fake_hosts
     host_ids = []
     host_collection = entities.HostCollection(organization=module_org).create()
-    host_ids = f"""[{','.join([f"{host.id}" for host in hosts])}]"""
+    host_ids = f"""[{','.join([f"{host.id}" for host in fake_hosts])}]"""
     host_ids = host_ids.strip('][').split(',')
     host_collection.host_ids = host_ids
     host_collection = host_collection.update(['host_ids'])
-    assert len(host_collection.host) == len(hosts)
+    assert len(host_collection.host) == len(fake_hosts)
 
 
 @pytest.mark.tier1
@@ -242,10 +238,9 @@ def test_positive_read_host_ids(module_org, fake_hosts):
 
     :BZ:1325989
     """
-    hosts = fake_hosts
-    host_collection = entities.HostCollection(host=hosts, organization=module_org).create()
+    host_collection = entities.HostCollection(host=fake_hosts, organization=module_org).create()
     assert frozenset(host.id for host in host_collection.host) == frozenset(
-        host.id for host in hosts
+        host.id for host in fake_hosts
     )
 
 
@@ -337,11 +332,10 @@ def test_positive_update_host(module_org, fake_hosts):
 
     :CaseImportance: Critical
     """
-    hosts = fake_hosts
-    host_collection = entities.HostCollection(host=[hosts[0]], organization=module_org).create()
-    host_collection.host_ids = [hosts[1].id]
+    host_collection = entities.HostCollection(host=[fake_hosts[0]], organization=module_org).create()
+    host_collection.host_ids = [fake_hosts[1].id]
     host_collection = host_collection.update(['host_ids'])
-    assert host_collection.host[0].id == hosts[1].id
+    assert host_collection.host[0].id == fake_hosts[1].id
 
 
 @pytest.mark.upgrade
@@ -355,8 +349,7 @@ def test_positive_update_hosts(module_org, fake_hosts):
 
     :CaseImportance: Critical
     """
-    hosts = fake_hosts
-    host_collection = entities.HostCollection(host=hosts, organization=module_org).create()
+    host_collection = entities.HostCollection(host=fake_hosts, organization=module_org).create()
     new_hosts = [entities.Host(organization=module_org).create() for _ in range(2)]
     host_ids = f"""[{','.join([f"{host.id}" for host in new_hosts])}]"""
     host_ids = host_ids.strip('][').split(',')
@@ -401,7 +394,7 @@ def test_negative_create_with_invalid_name(module_org, name):
 
 @pytest.mark.tier1
 def test_positive_add_remove_subscription(
-    module_org, module_lce, fake_hosts, module_promoted_cv, module_activation_key
+    module_org, module_lce, module_promoted_cv, module_activation_key
 ):
     """Try to bulk add and remove a subscription to members of a host collection.
 
