@@ -908,11 +908,9 @@ def test_positive_login_user_password_otp(auth_source_ipa, test_name, ldap_tear_
     with Session(test_name, ipa_data['ipa_otp_username'], otp_pass) as ldapsession:
         with pytest.raises(NavigationTriesExceeded):
             ldapsession.user.search('')
-        expected_user = "{} {}".format(ipa_data['ipa_otp_username'], ipa_data['ipa_otp_username'])
+        expected_user = f"{ipa_data['ipa_otp_username']} {ipa_data['ipa_otp_username']}"
         assert ldapsession.task.read_all()['current_user'] == expected_user
-    users = entities.User().search(
-        query={'search': 'login="{}"'.format(ipa_data['ipa_otp_username'])}
-    )
+    users = entities.User().search(query={'search': f"login=\"{ipa_data['ipa_otp_username']}\""})
     assert users[0].login == ipa_data['ipa_otp_username']
 
 
