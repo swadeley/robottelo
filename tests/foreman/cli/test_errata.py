@@ -856,13 +856,6 @@ ORG3_BIG_ERRATA_ID = FAKE_3_ERRATA_ID
 
 
 @pytest.fixture(scope='class')
-def sync_repo(module_product):
-    repo = entities.Repository(product=module_product).create()
-    repo.sync()
-    return repo
-
-
-@pytest.fixture(scope='class')
 def org1():
     """an org with one custom product & repository"""
     org1 = entities.Organization().create()
@@ -1336,7 +1329,6 @@ def test_positive_list_filter_by_org_label_and_sort_by_issued_date(module_org, r
 def test_positive_list_filter_by_product_id(
     org1,
     org2,
-    sync_repo,
 ):
     """Filter errata by product id
 
