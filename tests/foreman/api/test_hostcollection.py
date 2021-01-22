@@ -164,7 +164,9 @@ def test_positive_create_with_host(module_org, fake_hosts):
 
     :BZ: 1325989
     """
-    host_collection = entities.HostCollection(host=[fake_hosts[0]], organization=module_org).create()
+    host_collection = entities.HostCollection(
+        host=[fake_hosts[0]], organization=module_org
+    ).create()
     assert len(host_collection.host) == 1
 
 
@@ -259,7 +261,8 @@ def test_positive_update_name(module_org, new_name):
     """
     host_collection = entities.HostCollection(organization=module_org).create()
     host_collection.name = new_name
-    assert host_collection.update().name == new_name
+    host_collection.name = host_collection.update().name
+    assert host_collection.name == new_name
 
 
 @pytest.mark.parametrize('new_desc', **parametrized(valid_data_list()))
@@ -277,7 +280,8 @@ def test_positive_update_description(module_org, new_desc):
     """
     host_collection = entities.HostCollection(organization=module_org).create()
     host_collection.description = new_desc
-    assert host_collection.update().description == new_desc
+    host_collection.description = host_collection.update().description
+    assert host_collection.description == new_desc
 
 
 @pytest.mark.tier1
@@ -295,7 +299,8 @@ def test_positive_update_limit(module_org):
     ).create()
     for limit in (1, 3, 5, 10, 20):
         host_collection.max_hosts = limit
-        assert host_collection.update().max_hosts == limit
+        host_collection.max_hosts = host_collection.update().max_hosts
+        assert host_collection.max_hosts == limit
 
 
 @pytest.mark.tier1
@@ -332,7 +337,9 @@ def test_positive_update_host(module_org, fake_hosts):
 
     :CaseImportance: Critical
     """
-    host_collection = entities.HostCollection(host=[fake_hosts[0]], organization=module_org).create()
+    host_collection = entities.HostCollection(
+        host=[fake_hosts[0]], organization=module_org
+    ).create()
     host_collection.host_ids = [fake_hosts[1].id]
     host_collection = host_collection.update(['host_ids'])
     assert host_collection.host[0].id == fake_hosts[1].id
