@@ -49,21 +49,16 @@ from robottelo.constants import REPOSET
 from robottelo.constants.repos import CUSTOM_SWID_TAG_REPO
 from robottelo.constants.repos import FAKE_3_YUM_REPO
 from robottelo.constants.repos import FAKE_9_YUM_REPO
-from robottelo.decorators import skip_if_not_set
 from robottelo.helpers import add_remote_execution_ssh_key
 from robottelo.products import RepositoryCollection
 from robottelo.products import YumRepository
 from robottelo.vm import VirtualMachine
 
+pytestmark = [pytest.mark.run_in_one_thread, pytest.mark.skipif((
+    not settings.repos_hosting_url), reason='Missing repos_hosting_url')]
+
 CUSTOM_REPO_URL = FAKE_9_YUM_REPO
 CUSTOM_REPO_ERRATA_ID = FAKE_2_ERRATA_ID
-
-
-@skip_if_not_set('clients', 'fake_manifest')
-@pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
-@pytest.mark.run_in_one_thread
-class TestErrata:
-    """API Tests for the errata management feature"""
 
 
 @pytest.fixture(scope='module')
@@ -477,7 +472,6 @@ def test_positive_sort_by_issued_date(module_org):
 
 @pytest.mark.tier3
 @pytest.mark.skip_if_open("BZ:1682940")
-@pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
 def test_positive_filter_by_envs(module_org):
     """Filter applicable errata for a content host by current and
     Library environments
@@ -530,7 +524,6 @@ def test_positive_filter_by_envs(module_org):
 
 
 @pytest.mark.tier3
-@pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
 def test_positive_get_count_for_host(module_org):
     """Available errata count when retrieving Host
 
@@ -608,7 +601,6 @@ def test_positive_get_count_for_host(module_org):
 
 @pytest.mark.upgrade
 @pytest.mark.tier3
-@pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
 def test_positive_get_applicable_for_host(module_org):
     """Get applicable errata ids for a host
 
@@ -689,7 +681,6 @@ def test_positive_get_applicable_for_host(module_org):
 
 
 @pytest.mark.tier3
-@pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
 def test_positive_get_diff_for_cv_envs():
     """Generate a difference in errata between a set of environments
     for a content view
@@ -824,13 +815,6 @@ def test_positive_incremental_update_required(module_org, module_lce, activation
         )
         assert 'next_version' in response[0], 'Incremental update should be suggested'
         'at this point'
-
-
-@skip_if_not_set('clients', 'fake_manifest')
-@pytest.mark.skipif((not settings.repos_hosting_url), reason='Missing repos_hosting_url')
-@pytest.mark.run_in_one_thread
-class TestErrataSwidTags:
-    """API Tests for the errata management feature with swid tags"""
 
 
 @pytest.fixture(scope='module')
